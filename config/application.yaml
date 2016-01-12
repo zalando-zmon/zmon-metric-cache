@@ -1,0 +1,11 @@
+endpoints:
+  enabled: false
+  metrics:
+    enabled: true
+
+server:
+  port: 8086
+
+dataservice:
+    redis_host: localhost
+    redis_port: 6379

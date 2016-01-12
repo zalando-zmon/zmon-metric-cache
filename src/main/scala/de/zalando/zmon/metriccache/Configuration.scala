@@ -12,7 +12,7 @@ import scala.beans.BeanProperty
 @Component
 @Configuration
 @ConfigurationProperties(prefix = "metriccache")
-class DataServiceConfig {
+class MetricCacheConfig {
 
   @BeanProperty var rest_metric_hosts : java.util.List[String] = new util.ArrayList[String]()
 

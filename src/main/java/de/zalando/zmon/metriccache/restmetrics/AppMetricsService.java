@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.zalando.zmon.metriccache.CheckData;
-import de.zalando.zmon.metriccache.DataServiceConfig;
+import de.zalando.zmon.metriccache.MetricCacheConfig;
 import org.apache.http.client.fluent.Async;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
@@ -61,7 +61,7 @@ public class AppMetricsService {
     }
 
     @Autowired
-    public AppMetricsService(DataServiceConfig config) throws IOException {
+    public AppMetricsService(MetricCacheConfig config) throws IOException {
         serviceHosts = config.getRest_metric_hosts();
         localHostName = InetAddress.getLocalHost().getHostName();
         serverPort = Integer.parseInt(config.server_port());

@@ -40,7 +40,7 @@ public class Application {
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
     @Autowired
-    DataServiceConfig config;
+    MetricCacheConfig config;
 
     @Autowired
     ObjectMapper mapper;

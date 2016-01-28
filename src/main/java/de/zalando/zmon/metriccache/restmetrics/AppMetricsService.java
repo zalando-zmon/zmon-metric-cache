@@ -141,7 +141,23 @@ public class AppMetricsService {
                 while(statusCodes.hasNext()) {
                     Map.Entry<String, JsonNode> metricEntry = statusCodes.next();
                     if(metricEntry.getValue().has("99th") && metricEntry.getValue().has("mRate")) {
-                        storeMetric(applicationId, applicationVersion, entityId, path, method, Integer.parseInt(metricEntry.getKey()),
+                        int status = 999;
+                        try {
+                            status = Integer.parseInt(metricEntry.getKey());
+                        }
+                        catch(NumberFormatException ex) {
+                            if(metricEntry.getKey().startsWith("2")) {
+                                status = 299;
+                            }
+                            else if (metricEntry.getKey().startsWith("4")) {
+                                status = 499;
+                            }
+                            else if (metricEntry.getKey().startsWith("5")) {
+                                status = 599;
+                            }
+                        }
+
+                        storeMetric(applicationId, applicationVersion, entityId, path, method, status,
                                 ts,
                                 metricEntry.getValue().get("mRate").asDouble(),
                                 metricEntry.getValue().get("99th").asDouble());

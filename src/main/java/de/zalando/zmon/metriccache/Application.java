@@ -46,6 +46,9 @@ public class Application {
     ObjectMapper mapper;
 
     @Autowired
+    ApplicationMetricsWriter metricsWriter;
+
+    @Autowired
     AppMetricsService applicationRestMetrics;
 
     private static ObjectMapper valueMapper;
@@ -62,6 +65,14 @@ public class Application {
         // assume for now, that we only receive the right application data
         List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>(){});
         applicationRestMetrics.storeData(results);
+    }
+
+    @ResponseBody
+    @RequestMapping(value="/api/v1/rest-api-metrics/unpartitioned", method=RequestMethod.POST)
+    public void putRestAPIMetricsUnpartitioned(@RequestBody String data) throws IOException {
+        // Post data but repartition accross set of hosts (this is already done in data service)
+        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>(){});
+        metricsWriter.write(results);
     }
 
     @ResponseBody

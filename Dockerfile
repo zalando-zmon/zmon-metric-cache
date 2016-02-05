@@ -1,13 +1,8 @@
-FROM zalando/openjdk:8u40-b09-4
-
-RUN mkdir /app
-RUN mkdir /app/config
-
-WORKDIR /app
-
-ADD target/zmon-metric-cache-1.0-SNAPSHOT.jar /app/zmon-metric-cache.jar
-ADD config/application.yaml /app/config/application.yaml
+FROM registry.opensource.zalan.do/stups/openjdk:8u66-b17-1-10
 
 EXPOSE 8086
 
-CMD ["java","-jar","zmon-data-service.jar"]
+COPY target/zmon-metric-cache-1.0-SNAPSHOT.jar /zmon-metric-cache.jar
+COPY target/scm-source.json /
+
+CMD java $JAVA_OPTS $(java-dynamic-memory-opts) -jar /zmon-metric-cache.jar

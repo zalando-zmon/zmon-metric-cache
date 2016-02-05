@@ -103,7 +103,8 @@ public class Application {
         else {
             int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
             String targetHost = config.getRest_metric_hosts().get(hostId);
-            LOG.info("Redirecting kairosdb metrics request to {} = {}/{}", applicationId, hostId, targetHost);
+            // TODO: we would not need to redirect if the host list is empty or contains only one item (ourself)
+            LOG.info("Redirecting KairosDB metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
             Executor executor = Executor.newInstance();
             URIBuilder builder = new URIBuilder();

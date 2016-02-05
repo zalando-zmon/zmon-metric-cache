@@ -67,6 +67,7 @@ public class Application {
     public void putRestAPIMetrics(@RequestBody String data) throws IOException {
         // assume for now, that we only receive the right application data
         List<CheckData> results = mapper.readValue(data, TYPE_REFERENCE);
+        // TODO: validate input properly (e.g. "check_result" must not be null!)
         applicationRestMetrics.storeData(results);
     }
 
@@ -75,6 +76,7 @@ public class Application {
     public void putRestAPIMetricsUnpartitioned(@RequestBody String data) throws IOException {
         // Post data but repartition accross set of hosts (this is already done in data service)
         List<CheckData> results = mapper.readValue(data, TYPE_REFERENCE);
+        // TODO: validate input properly (e.g. "check_result" must not be null!)
         metricsWriter.write(results);
     }
 

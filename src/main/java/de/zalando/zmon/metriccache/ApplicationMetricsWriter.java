@@ -28,9 +28,9 @@ class ApplicationMetricsWriter {
     @Async
     public void write(List<CheckData> data) {
         log.debug("write application-metrics ...");
-        if (null!=data && data.size()>0) {
+        if (null != data && data.size() > 0) {
             try {
-                Map<Integer, List<CheckData>> partitions =data.stream()
+                Map<Integer, List<CheckData>> partitions = data.stream()
                         .filter(x -> !x.exception)
                         .collect(Collectors.groupingBy(x -> Math
                                 .abs(x.entity.get("application_id").hashCode() % config.getRest_metric_hosts().size())));

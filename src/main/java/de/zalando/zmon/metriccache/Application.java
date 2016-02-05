@@ -52,6 +52,7 @@ public class Application {
     AppMetricsService applicationRestMetrics;
 
     private static ObjectMapper valueMapper;
+
     static {
         valueMapper = new ObjectMapper();
         valueMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
@@ -60,47 +61,48 @@ public class Application {
 
 
     @ResponseBody
-    @RequestMapping(value="/api/v1/rest-api-metrics/", method=RequestMethod.POST)
+    @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.POST)
     public void putRestAPIMetrics(@RequestBody String data) throws IOException {
         // assume for now, that we only receive the right application data
-        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>(){});
+        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
+        });
         applicationRestMetrics.storeData(results);
     }
 
     @ResponseBody
-    @RequestMapping(value="/api/v1/rest-api-metrics/unpartitioned", method=RequestMethod.POST)
+    @RequestMapping(value = "/api/v1/rest-api-metrics/unpartitioned", method = RequestMethod.POST)
     public void putRestAPIMetricsUnpartitioned(@RequestBody String data) throws IOException {
         // Post data but repartition accross set of hosts (this is already done in data service)
-        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>(){});
+        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
+        });
         metricsWriter.write(results);
     }
 
     @ResponseBody
-    @RequestMapping(value="/api/v1/rest-api-metrics/applications", method=RequestMethod.GET)
-    public Collection<String> getRegisteredApplications(@RequestParam(value="global", defaultValue="false") boolean global) throws IOException {
+    @RequestMapping(value = "/api/v1/rest-api-metrics/applications")
+    public Collection<String> getRegisteredApplications(@RequestParam(value = "global", defaultValue = "false") boolean global) throws IOException {
         // assume for now, that we only receive the right application data
         return applicationRestMetrics.getRegisteredAppVersions();
     }
 
     @ResponseBody
-    @RequestMapping(value="/api/v1/rest-api-metrics/tracked-endpoints", method=RequestMethod.GET)
-    public Collection<String> getRegisteredApplications(@RequestParam(value="application_id") String applicationId, @RequestParam(value="global", defaultValue="false") boolean global) throws IOException {
+    @RequestMapping(value = "/api/v1/rest-api-metrics/tracked-endpoints")
+    public Collection<String> getRegisteredApplications(@RequestParam(value = "application_id") String applicationId, @RequestParam(value = "global", defaultValue = "false") boolean global) throws IOException {
         // assume for now, that we only receive the right application data
         return applicationRestMetrics.getRegisteredEndpoints(applicationId);
     }
 
     @ResponseBody
-    @RequestMapping(value="/api/v1/rest-api-metrics/kairosdb-format", method=RequestMethod.GET)
-    public void getMetricsInKairosDBFormat(Writer writer, HttpServletResponse response, @RequestParam(value="application_id") String applicationId, @RequestParam(value="application_version", defaultValue="1") String applicationVersion, @RequestParam(value="redirect", defaultValue="true") boolean redirect) throws URISyntaxException, IOException {
-        if(!redirect) {
+    @RequestMapping(value = "/api/v1/rest-api-metrics/kairosdb-format")
+    public void getMetricsInKairosDBFormat(Writer writer, HttpServletResponse response, @RequestParam(value = "application_id") String applicationId, @RequestParam(value = "application_version", defaultValue = "1") String applicationVersion, @RequestParam(value = "redirect", defaultValue = "true") boolean redirect) throws URISyntaxException, IOException {
+        if (!redirect) {
             try {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 writer.write(mapper.writeValueAsString(applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis())));
             } catch (IOException ex) {
                 LOG.error("Failed to write metric result to output stream", ex);
             }
-        }
-        else {
+        } else {
             int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
             String targetHost = config.getRest_metric_hosts().get(hostId);
             // TODO: we would not need to redirect if the host list is empty or contains only one item (ourself)
@@ -119,26 +121,26 @@ public class Application {
     }
 
     @ResponseBody
-    @RequestMapping(value="/api/v1/rest-api-metrics/", method=RequestMethod.GET)
-    public void getRestApiMetrics(Writer writer, HttpServletResponse response, @RequestParam(value="application_id") String applicationId, @RequestParam(value="application_version") String applicationVersion, @RequestParam(value="redirect", defaultValue="true") boolean redirect) throws URISyntaxException, IOException {
-        if(!redirect) {
+    @RequestMapping(value = "/api/v1/rest-api-metrics/")
+    public void getRestApiMetrics(Writer writer, HttpServletResponse response, @RequestParam(value = "application_id") String applicationId, @RequestParam(value = "application_version") String applicationVersion, @RequestParam(value = "redirect", defaultValue = "true") boolean redirect) throws URISyntaxException, IOException {
+        if (!redirect) {
             try {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 writer.write(mapper.writeValueAsString(applicationRestMetrics.getAggrMetrics(applicationId, applicationVersion, System.currentTimeMillis())));
             } catch (IOException ex) {
                 LOG.error("Failed to write metric result to output stream", ex);
             }
-        }
-        else {
+        } else {
             int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
             String targetHost = config.getRest_metric_hosts().get(hostId);
+            // TODO: we would not need to redirect if the host list is empty or contains only one item (ourself)
             LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
             Executor executor = Executor.newInstance();
             URIBuilder builder = new URIBuilder();
             URI uri = builder.setScheme("http").setHost(targetHost).setPort(Integer.parseInt(config.getServer_port())).setPath("/api/v1/rest-api-metrics/").setParameter("redirect", "false")
-                                                                                      .setParameter("application_id", applicationId)
-                                                                                      .setParameter("application_version", applicationVersion).build();
+                    .setParameter("application_id", applicationId)
+                    .setParameter("application_version", applicationVersion).build();
 
             String body = executor.execute(Request.Get(uri)).returnContent().asString();
             response.setContentType(ContentType.APPLICATION_JSON.getMimeType());

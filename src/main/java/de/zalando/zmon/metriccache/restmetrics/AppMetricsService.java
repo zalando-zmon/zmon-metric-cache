@@ -53,8 +53,7 @@ public class AppMetricsService {
         public void run() {
             try {
                 appMetricService.cleanUp();
-            }
-            catch(Exception ex) {
+            } catch (Exception ex) {
                 LOG.error("Unexpected error in cleanup job");
             }
         }
@@ -66,8 +65,8 @@ public class AppMetricsService {
         localHostName = InetAddress.getLocalHost().getHostName();
         serverPort = Integer.parseInt(config.server_port());
 
-        for(int i = 0; i < serviceHosts.size(); ++i) {
-            if(serviceHosts.get(i).equals(localHostName)) {
+        for (int i = 0; i < serviceHosts.size(); ++i) {
+            if (serviceHosts.get(i).equals(localHostName)) {
                 localPartition = i;
                 break;
             }
@@ -81,7 +80,7 @@ public class AppMetricsService {
 
     protected void cleanUp() {
         LOG.info("Starting instance cleanup...");
-        for(ApplicationVersion v : appVersions.values()) {
+        for (ApplicationVersion v : appVersions.values()) {
             v.cleanUp();
         }
     }
@@ -91,68 +90,64 @@ public class AppMetricsService {
     }
 
     public Collection<String> getRegisteredEndpoints(String applicationId) {
-        if(!appVersions.containsKey(applicationId)) return null;
+        if (!appVersions.containsKey(applicationId)) return null;
         ApplicationVersion v = appVersions.get(applicationId);
         return v.getTrackedEndpoints();
     }
 
     public void storeData(List<CheckData> data) {
-        for(CheckData d: data) {
+        for (CheckData d : data) {
             Double ts = d.check_result.get("ts").asDouble();
             ts = ts * 1000.;
             Long tsL = ts.longValue();
-            pushMetric(d.entity.get("application_id"), d.entity.get("application_version"),d.entity_id, tsL, d.check_result.get("value"));
+            pushMetric(d.entity.get("application_id"), d.entity.get("application_version"), d.entity_id, tsL, d.check_result.get("value"));
         }
     }
 
     public void receiveData(Map<Integer, List<CheckData>> data) {
         // store local data
-        if(data.containsKey(localPartition)) {
+        if (data.containsKey(localPartition)) {
             storeData(data.get(localPartition));
         }
 
         Async async = Async.newInstance().use(asyncExecutorPool);
-        for(int i = 0; i < serviceHosts.size(); ++i) {
-            if(localPartition==i) continue;
-            if(!data.containsKey(i) || data.get(i).size()<=0) continue;
+        for (int i = 0; i < serviceHosts.size(); ++i) {
+            if (localPartition == i) continue;
+            if (!data.containsKey(i) || data.get(i).size() <= 0) continue;
 
             try {
-                Request r = Request.Post("http://"+serviceHosts.get(i)+":"+ serverPort +"/api/v1/rest-api-metrics/").bodyString(mapper.writeValueAsString(data.get(i)), ContentType.APPLICATION_JSON);
+                Request r = Request.Post("http://" + serviceHosts.get(i) + ":" + serverPort + "/api/v1/rest-api-metrics/").bodyString(mapper.writeValueAsString(data.get(i)), ContentType.APPLICATION_JSON);
                 async.execute(r);
-            }
-            catch(IOException ex) {
+            } catch (IOException ex) {
                 LOG.error("Failed to serialize check data", ex);
             }
         }
     }
 
     public void pushMetric(String applicationId, String applicationVersion, String entityId, long ts, JsonNode checkResult) {
-        Iterator<Map.Entry<String, JsonNode>> endpoints = ((ObjectNode)checkResult).fields();
-        while(endpoints.hasNext()) {
+        Iterator<Map.Entry<String, JsonNode>> endpoints = ((ObjectNode) checkResult).fields();
+        while (endpoints.hasNext()) {
             Map.Entry<String, JsonNode> endpoint = endpoints.next();
             String path = endpoint.getKey();
 
             Iterator<Map.Entry<String, JsonNode>> methods = ((ObjectNode) endpoint.getValue()).fields();
-            while(methods.hasNext()) {
+            while (methods.hasNext()) {
                 Map.Entry<String, JsonNode> methodEntry = methods.next();
                 String method = methodEntry.getKey();
 
                 Iterator<Map.Entry<String, JsonNode>> statusCodes = ((ObjectNode) methodEntry.getValue()).fields();
-                while(statusCodes.hasNext()) {
+                while (statusCodes.hasNext()) {
                     Map.Entry<String, JsonNode> metricEntry = statusCodes.next();
-                    if(metricEntry.getValue().has("99th") && metricEntry.getValue().has("mRate")) {
+                    if (metricEntry.getValue().has("99th") && metricEntry.getValue().has("mRate")) {
                         int status = 999;
                         try {
                             status = Integer.parseInt(metricEntry.getKey());
-                        }
-                        catch(NumberFormatException ex) {
-                            if(metricEntry.getKey().startsWith("2")) {
+                        } catch (NumberFormatException ex) {
+                            if (metricEntry.getKey().startsWith("2")) {
                                 status = 299;
-                            }
-                            else if (metricEntry.getKey().startsWith("4")) {
+                            } else if (metricEntry.getKey().startsWith("4")) {
                                 status = 499;
-                            }
-                            else if (metricEntry.getKey().startsWith("5")) {
+                            } else if (metricEntry.getKey().startsWith("5")) {
                                 status = 599;
                             }
                         }
@@ -167,7 +162,7 @@ public class AppMetricsService {
         }
     }
 
-    public static class KairosDBResultWrapper  {
+    public static class KairosDBResultWrapper {
         public final List<Object> queries = new ArrayList<>(1);
 
         public KairosDBResultWrapper() {
@@ -203,45 +198,45 @@ public class AppMetricsService {
         KairosDBResultQuery q = new KairosDBResultQuery();
         w.queries.add(q);
 
-        for(EpResult er : data.endpoints.values()) {
-            for(Map.Entry<Integer, List<EpPoint>> p : er.points.entrySet()) {
-                if(p.getValue().size()<=0) {
+        for (EpResult er : data.endpoints.values()) {
+            for (Map.Entry<Integer, List<EpPoint>> p : er.points.entrySet()) {
+                if (p.getValue().size() <= 0) {
                     continue;
                 }
 
-                ObjectNode r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".mRate", "mRate", p.getKey().toString(), p.getKey().toString().substring(0,1));
-                for(EpPoint dp : p.getValue()) {
+                ObjectNode r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".mRate", "mRate", p.getKey().toString(), p.getKey().toString().substring(0, 1));
+                for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.rate);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
 
-                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".median", "median", p.getKey().toString(), p.getKey().toString().substring(0,1));
-                for(EpPoint dp : p.getValue()) {
+                r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".median", "median", p.getKey().toString(), p.getKey().toString().substring(0, 1));
+                for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.latency);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
 
-                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".99th", "99th", p.getKey().toString(), p.getKey().toString().substring(0,1));
-                for(EpPoint dp : p.getValue()) {
+                r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".99th", "99th", p.getKey().toString(), p.getKey().toString().substring(0, 1));
+                for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.latency);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
 
-                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".min", "min", p.getKey().toString(), p.getKey().toString().substring(0,1));
-                for(EpPoint dp : p.getValue()) {
+                r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".min", "min", p.getKey().toString(), p.getKey().toString().substring(0, 1));
+                for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.minLatency);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
 
-                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".max", "max", p.getKey().toString(), p.getKey().toString().substring(0,1));
-                for(EpPoint dp : p.getValue()) {
+                r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".max", "max", p.getKey().toString(), p.getKey().toString().substring(0, 1));
+                for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.maxLatency);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
             }
         }
@@ -250,7 +245,7 @@ public class AppMetricsService {
     }
 
     public KairosDBResultWrapper getKairosResult(String applicationId, String applicationVersion, long maxTs) {
-        if(!appVersions.containsKey(applicationId)) {
+        if (!appVersions.containsKey(applicationId)) {
             return null;
         }
 
@@ -260,7 +255,7 @@ public class AppMetricsService {
 
 
     public VersionResult getAggrMetrics(String applicationId, String applicationVersion, long maxTs) {
-        if(!appVersions.containsKey(applicationId)) {
+        if (!appVersions.containsKey(applicationId)) {
             return null;
         }
         return appVersions.get(applicationId).getData(maxTs);
@@ -268,10 +263,10 @@ public class AppMetricsService {
 
     private void storeMetric(String applicationId, String applicationVersion, String entityId, String path, String method, int status, long ts, double rate, double latency) {
         ApplicationVersion v = appVersions.get(applicationId); // no versioning for now
-        if(null==v) {
+        if (null == v) {
             synchronized (this) {
                 v = appVersions.get(applicationId);
-                if(null==v) {
+                if (null == v) {
                     LOG.info("Adding application version {} {}", applicationId, applicationVersion);
                     v = new ApplicationVersion(applicationId, applicationVersion);
                     appVersions.put(applicationId, v);

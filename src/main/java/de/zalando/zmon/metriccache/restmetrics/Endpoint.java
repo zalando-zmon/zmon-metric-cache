@@ -20,9 +20,9 @@ class Endpoint {
     // only used for cleanup every n-hours so we return just any value
     public long getMaxTimestamp() {
         long ts = 0;
-        for(DataSeries ds : series) {
+        for (DataSeries ds : series) {
             ts = Math.max(ds.ts[0], ts);
-            ts = Math.max(ds.ts[ds.ts.length/2], ts); // run 2nd time in case is obsolete or errorneous
+            ts = Math.max(ds.ts[ds.ts.length / 2], ts); // run 2nd time in case is obsolete or errorneous
         }
         return ts;
     }

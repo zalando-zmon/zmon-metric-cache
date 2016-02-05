@@ -39,6 +39,8 @@ public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
+    private static final TypeReference<List<CheckData>> TYPE_REFERENCE = new TypeReference<List<CheckData>>() {};
+
     @Autowired
     MetricCacheConfig config;
 
@@ -64,8 +66,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.POST)
     public void putRestAPIMetrics(@RequestBody String data) throws IOException {
         // assume for now, that we only receive the right application data
-        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
-        });
+        List<CheckData> results = mapper.readValue(data, TYPE_REFERENCE);
         applicationRestMetrics.storeData(results);
     }
 
@@ -73,8 +74,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/unpartitioned", method = RequestMethod.POST)
     public void putRestAPIMetricsUnpartitioned(@RequestBody String data) throws IOException {
         // Post data but repartition accross set of hosts (this is already done in data service)
-        List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
-        });
+        List<CheckData> results = mapper.readValue(data, TYPE_REFERENCE);
         metricsWriter.write(results);
     }
 
@@ -95,7 +95,9 @@ public class Application {
     @ResponseBody
     @RequestMapping(value = "/api/v1/rest-api-metrics/kairosdb-format")
     public void getMetricsInKairosDBFormat(Writer writer, HttpServletResponse response, @RequestParam(value = "application_id") String applicationId, @RequestParam(value = "application_version", defaultValue = "1") String applicationVersion, @RequestParam(value = "redirect", defaultValue = "true") boolean redirect) throws URISyntaxException, IOException {
-        if (!redirect) {
+        final List<String> hosts = config.getRest_metric_hosts();
+        // we don't need to redirect if the host list is empty or contains only one item (ourself)
+        if (!redirect || hosts.size() < 2) {
             try {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 writer.write(mapper.writeValueAsString(applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis())));
@@ -103,8 +105,8 @@ public class Application {
                 LOG.error("Failed to write metric result to output stream", ex);
             }
         } else {
-            int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
-            String targetHost = config.getRest_metric_hosts().get(hostId);
+            int hostId = Math.abs(applicationId.hashCode() % hosts.size());
+            String targetHost = hosts.get(hostId);
             // TODO: we would not need to redirect if the host list is empty or contains only one item (ourself)
             LOG.info("Redirecting KairosDB metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
@@ -123,7 +125,9 @@ public class Application {
     @ResponseBody
     @RequestMapping(value = "/api/v1/rest-api-metrics/")
     public void getRestApiMetrics(Writer writer, HttpServletResponse response, @RequestParam(value = "application_id") String applicationId, @RequestParam(value = "application_version") String applicationVersion, @RequestParam(value = "redirect", defaultValue = "true") boolean redirect) throws URISyntaxException, IOException {
-        if (!redirect) {
+        final List<String> hosts = config.getRest_metric_hosts();
+        // we don't need to redirect if the host list is empty or contains only one item (ourself)
+        if (!redirect || hosts.size() < 2) {
             try {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 writer.write(mapper.writeValueAsString(applicationRestMetrics.getAggrMetrics(applicationId, applicationVersion, System.currentTimeMillis())));
@@ -131,9 +135,8 @@ public class Application {
                 LOG.error("Failed to write metric result to output stream", ex);
             }
         } else {
-            int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
-            String targetHost = config.getRest_metric_hosts().get(hostId);
-            // TODO: we would not need to redirect if the host list is empty or contains only one item (ourself)
+            int hostId = Math.abs(applicationId.hashCode() % hosts.size());
+            String targetHost = hosts.get(hostId);
             LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
             Executor executor = Executor.newInstance();

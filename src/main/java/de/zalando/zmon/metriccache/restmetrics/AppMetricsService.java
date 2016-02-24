@@ -34,6 +34,7 @@ public class AppMetricsService {
     private HashMap<String, ApplicationVersion> appVersions = new HashMap<>();
 
     private final String localHostName;
+    private final boolean forwardData;
     private int localPartition = -1;
 
     private final static ObjectMapper mapper = new ObjectMapper();
@@ -75,7 +76,15 @@ public class AppMetricsService {
 
         executorService.scheduleWithFixedDelay(new CleanUpJob(this), 60, 60, TimeUnit.MINUTES);
 
+        if (serviceHosts.size()==1 && serviceHosts.get(0).equals("localhost")) {
+            forwardData = false;
+        }
+        else {
+            forwardData = true;
+        }
+
         LOG.info("Setting local partition to {}", localPartition);
+        LOG.info("Local host resolves to: {}", localHostName);
         LOG.info("Host names {}", serviceHosts);
     }
 
@@ -102,27 +111,6 @@ public class AppMetricsService {
             ts = ts * 1000.;
             Long tsL = ts.longValue();
             pushMetric(d.entity.get("application_id"), d.entity.get("application_version"),d.entity_id, tsL, d.check_result.get("value"));
-        }
-    }
-
-    public void receiveData(Map<Integer, List<CheckData>> data) {
-        // store local data
-        if(data.containsKey(localPartition)) {
-            storeData(data.get(localPartition));
-        }
-
-        Async async = Async.newInstance().use(asyncExecutorPool);
-        for(int i = 0; i < serviceHosts.size(); ++i) {
-            if(localPartition==i) continue;
-            if(!data.containsKey(i) || data.get(i).size()<=0) continue;
-
-            try {
-                Request r = Request.Post("http://"+serviceHosts.get(i)+":"+ serverPort +"/api/v1/rest-api-metrics/").bodyString(mapper.writeValueAsString(data.get(i)), ContentType.APPLICATION_JSON);
-                async.execute(r);
-            }
-            catch(IOException ex) {
-                LOG.error("Failed to serialize check data", ex);
-            }
         }
     }
 

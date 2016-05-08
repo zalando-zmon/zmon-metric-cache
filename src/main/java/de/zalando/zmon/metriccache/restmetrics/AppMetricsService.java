@@ -148,6 +148,8 @@ public class AppMetricsService {
                         storeMetric(applicationId, applicationVersion, entityId, path, method, status,
                                 ts,
                                 metricEntry.getValue().get("mRate").asDouble(),
+                                metricEntry.getValue().get("median").asDouble(),
+                                metricEntry.getValue().get("75th").asDouble(),
                                 metricEntry.getValue().get("99th").asDouble());
                     }
                 }
@@ -207,7 +209,14 @@ public class AppMetricsService {
                 r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".median", "median", p.getKey().toString(), p.getKey().toString().substring(0,1));
                 for(EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
-                    a.add(dp.ts).add(dp.latency);
+                    a.add(dp.ts).add(dp.latencyMedian);
+                    ((ArrayNode)r.get("values")).add(a);
+                }
+
+                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".75th", "75th", p.getKey().toString(), p.getKey().toString().substring(0,1));
+                for(EpPoint dp : p.getValue()) {
+                    ArrayNode a = mapper.createArrayNode();
+                    a.add(dp.ts).add(dp.latency75th);
                     ((ArrayNode)r.get("values")).add(a);
                 }
 
@@ -254,7 +263,7 @@ public class AppMetricsService {
         return appVersions.get(applicationId).getData(maxTs);
     }
 
-    private void storeMetric(String applicationId, String applicationVersion, String entityId, String path, String method, int status, long ts, double rate, double latency) {
+    private void storeMetric(String applicationId, String applicationVersion, String entityId, String path, String method, int status, long ts, double rate, double latencyMedian, double latency75th, double latency99th) {
         ApplicationVersion v = appVersions.get(applicationId); // no versioning for now
         if(null==v) {
             synchronized (this) {
@@ -266,6 +275,6 @@ public class AppMetricsService {
                 }
             }
         }
-        v.addDataPoint(entityId, path, method, status, ts, rate, latency);
+        v.addDataPoint(entityId, path, method, status, ts, rate, latencyMedian, latency75th, latency99th);
     }
 }

@@ -29,9 +29,9 @@ public class ApplicationVersion {
         long now = System.currentTimeMillis();
 
         // remove elements from the end
-        while(i>=0) {
+        while (i >= 0) {
             long ts = instances.get(i).getMaxTimestamp();
-            if((now-ts)>1000*60*60*240) { // keep instances around for 240 minutes
+            if ((now - ts) > 1000 * 60 * 60 * 240) { // keep instances around for 240 minutes
                 LOG.info("Removing old instance: {}", instances.get(i).instanceId);
                 instances.remove(i);
             }
@@ -42,8 +42,8 @@ public class ApplicationVersion {
     public Collection<String> getTrackedEndpoints() {
         Set<String> endpoints = new HashSet<>();
 
-        for(ServiceInstance i : instances) {
-            for(Endpoint ep : i.endpoints) {
+        for (ServiceInstance i : instances) {
+            for (Endpoint ep : i.endpoints) {
                 endpoints.add(ep.path + "|" + ep.method);
             }
         }
@@ -52,35 +52,35 @@ public class ApplicationVersion {
     }
 
     public VersionResult getData(long maxTs) {
-        maxTs = (maxTs - (N*60000));
+        maxTs = (maxTs - (N * 60000));
         VersionResult result = new VersionResult();
 
         Set<String> eps = new HashSet<>();
         Set<Integer> codes = new HashSet<>();
 
-        for(ServiceInstance i : instances) {
-            for(Endpoint e : i.endpoints) {
+        for (ServiceInstance i : instances) {
+            for (Endpoint e : i.endpoints) {
                 eps.add(e.path + "|" + e.method);
-                for(DataSeries d : e.series) {
+                for (DataSeries d : e.series) {
                     codes.add(d.statusCode);
                 }
             }
         }
 
-        for(String ep : eps) {
+        for (String ep : eps) {
             EpResult epr = new EpResult(ep.split("\\|")[0], ep.split("\\|")[1]);
             result.endpoints.put(ep, epr);
 
-            for(int code : codes) {
+            for (int code : codes) {
 
                 List<DataSeries> series = new ArrayList<>();
-                for(ServiceInstance i : instances) {
-                    for(Endpoint e : i.endpoints) {
-                        if(!ep.equals(e.path+"|"+e.method)) {
+                for (ServiceInstance i : instances) {
+                    for (Endpoint e : i.endpoints) {
+                        if (!ep.equals(e.path + "|" + e.method)) {
                             continue;
                         }
-                        for(DataSeries d : e.series) {
-                            if(!(d.statusCode==code)) {
+                        for (DataSeries d : e.series) {
+                            if (!(d.statusCode == code)) {
                                 continue;
                             }
                             series.add(d);
@@ -90,7 +90,7 @@ public class ApplicationVersion {
 
                 List<EpPoint> points = new ArrayList<>(N);
 
-                for(int i = 0 ; i<N; ++i) {
+                for (int i = 0; i < N; ++i) {
                     double rate = 0;
                     double latency99th = 0;
                     double latencyMedian = 0;
@@ -105,7 +105,7 @@ public class ApplicationVersion {
                     // Looping over different application instances here
                     for (DataSeries s : series) {
                         // assume that the TS is written and thus up to date, otherwise data point is invalid
-                        if(s.ts[i]>maxTs) {
+                        if (s.ts[i] > maxTs) {
                             rate += s.points[i][0];
                             latency99th += s.points[i][3];
                             latency75th += s.points[i][2];
@@ -118,13 +118,12 @@ public class ApplicationVersion {
                             maxRate = Math.max(s.points[i][0], maxRate);
 
                             n++;
-                        }
-                        else {
+                        } else {
                             partial = true;
                         }
                     }
-                    if(n>0) {
-                        points.add(new EpPoint(tsMax, rate, latency99th/n, latency75th/n, latencyMedian/n, maxRate, maxLatency, minLatency, partial));
+                    if (n > 0) {
+                        points.add(new EpPoint(tsMax, rate, latency99th / n, latency75th / n, latencyMedian / n, maxRate, maxLatency, minLatency, partial));
                     }
                 }
 
@@ -138,16 +137,15 @@ public class ApplicationVersion {
     }
 
 
-
     /* for now assume no concurrency issue on instance level here, as freq too low and data arrives per instance */
     public void addDataPoint(String id, String path, String method, int status, long ts, double rate, double latencyMedian, double latency75th, double latency99th) {
         ServiceInstance instance = null;
-        for(ServiceInstance si : instances) {
-            if(si.instanceId.equals(id)) {
+        for (ServiceInstance si : instances) {
+            if (si.instanceId.equals(id)) {
                 instance = si;
             }
         }
-        if(null==instance) {
+        if (null == instance) {
             instance = new ServiceInstance(id);
             synchronized (this) {
                 instances.add(instance);
@@ -155,24 +153,24 @@ public class ApplicationVersion {
         }
 
         Endpoint ep = null;
-        for(Endpoint e : instance.endpoints) {
-            if(e.path.equals(path) && e.method.equals(method)) {
+        for (Endpoint e : instance.endpoints) {
+            if (e.path.equals(path) && e.method.equals(method)) {
                 ep = e;
             }
         }
-        if(null==ep) {
+        if (null == ep) {
             ep = new Endpoint(path, method);
             instance.endpoints.add(ep);
         }
 
         DataSeries series = null;
-        for(DataSeries ds : ep.series) {
-            if(ds.statusCode == status) {
+        for (DataSeries ds : ep.series) {
+            if (ds.statusCode == status) {
                 series = ds;
             }
         }
 
-        if(null==series) {
+        if (null == series) {
             series = new DataSeries(status);
             ep.series.add(series);
         }

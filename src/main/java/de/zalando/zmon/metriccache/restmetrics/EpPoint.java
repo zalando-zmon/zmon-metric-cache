@@ -23,7 +23,7 @@ public class EpPoint {
         latency75th = l75th;
         this.partial = partial;
         this.maxRate = rMax;
-        this.maxLatency= lMax;
+        this.maxLatency = lMax;
         this.minLatency = lMin;
         this.latency75th = l75th;
         this.latencyMedian = lMedian;

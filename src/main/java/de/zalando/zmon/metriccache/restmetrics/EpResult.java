@@ -15,5 +15,6 @@ public class EpResult {
         path = p;
         method = m;
     }
+
     public Map<Integer, List<EpPoint>> points = new HashMap<>();
 }

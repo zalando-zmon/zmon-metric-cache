@@ -6,9 +6,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.zalando.zmon.metriccache.CheckData;
 import de.zalando.zmon.metriccache.MetricCacheConfig;
-import org.apache.http.client.fluent.Async;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,10 +72,9 @@ public class AppMetricsService {
 
         executorService.scheduleWithFixedDelay(new CleanUpJob(this), 60, 60, TimeUnit.MINUTES);
 
-        if (serviceHosts.size()==1 && serviceHosts.get(0).equals("localhost")) {
+        if (serviceHosts.size() == 1 && serviceHosts.get(0).equals("localhost")) {
             forwardData = false;
-        }
-        else {
+        } else {
             forwardData = true;
         }
 
@@ -206,14 +202,14 @@ public class AppMetricsService {
                 for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.latencyMedian);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
 
-                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".75th", "75th", p.getKey().toString(), p.getKey().toString().substring(0,1));
-                for(EpPoint dp : p.getValue()) {
+                r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".75th", "75th", p.getKey().toString(), p.getKey().toString().substring(0, 1));
+                for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
                     a.add(dp.ts).add(dp.latency75th);
-                    ((ArrayNode)r.get("values")).add(a);
+                    ((ArrayNode) r.get("values")).add(a);
                 }
 
                 r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".99th", "99th", p.getKey().toString(), p.getKey().toString().substring(0, 1));

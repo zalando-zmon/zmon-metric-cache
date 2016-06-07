@@ -17,7 +17,7 @@ class ServiceInstance {
     // returns an assumed max time stamp, assuming that we have regular wrap arounds that should be fine
     public long getMaxTimestamp() {
         long ts = 0;
-        for(Endpoint ep : endpoints) {
+        for (Endpoint ep : endpoints) {
             ts = Math.max(ts, ep.getMaxTimestamp());
         }
         return ts;

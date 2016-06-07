@@ -17,7 +17,7 @@ class DataSeries {
 
     // write to array in ring form with index based on time from 0
     public void newEntry(long t, double r, double latencyMedian, double latency75th, double latency99th) {
-        int bucket = (int)((t / 60000) % N);
+        int bucket = (int) ((t / 60000) % N);
         ts[bucket] = t;
         points[bucket][0] = r;
         points[bucket][1] = latencyMedian;

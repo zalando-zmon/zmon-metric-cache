@@ -96,7 +96,7 @@ public class Application {
     }
 
     @ResponseBody
-    @RequestMapping(value = "/api/v1/rest-api-metrics/kairosdb-format", method = RequestMethod.GET)
+    @RequestMapping(value = "/api/v1/rest-api-metrics/kairosdb-format")
     public void getMetricsInKairosDBFormat(Writer writer, HttpServletResponse response, @RequestParam(value = "application_id") String applicationId, @RequestParam(value = "application_version", defaultValue = "1") String applicationVersion, @RequestParam(value = "redirect", defaultValue = "true") boolean redirect) throws URISyntaxException, IOException {
         final List<String> hosts = config.getRest_metric_hosts();
         if (hosts.size() == 1 && hosts.get(0).equals("localhost")) {
@@ -129,7 +129,7 @@ public class Application {
     }
 
     @ResponseBody
-    @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.GET)
+    @RequestMapping(value = "/api/v1/rest-api-metrics/")
     public void getRestApiMetrics(Writer writer, HttpServletResponse response, @RequestParam(value = "application_id") String applicationId, @RequestParam(value = "application_version") String applicationVersion, @RequestParam(value = "redirect", defaultValue = "true") boolean redirect) throws URISyntaxException, IOException {
         final List<String> hosts = config.getRest_metric_hosts();
         if (hosts.size() == 1 && hosts.get(0).equals("localhost")) {

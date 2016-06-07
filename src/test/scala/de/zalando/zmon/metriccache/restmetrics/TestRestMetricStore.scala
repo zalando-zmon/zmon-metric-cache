@@ -18,7 +18,7 @@ class TestRestMetricStore extends FlatSpec with Matchers {
         for (ep <- List("/", "/users", "/accounts", "/bookings", "/stock", "/articles", "/inventory", "/payment","/entities","/hosts")) {
           for (m<-List("GET","POST","DELETE","PUT")) {
             for (sc <- List(200, 404, 500)) {
-              app.addDataPoint("11111-22222-33333-" + id, ep, m, sc, start - (250 - i) * 60000, i, i * 1.12345)
+              app.addDataPoint("11111-22222-33333-" + id, ep, m, sc, start - (250 - i) * 60000, i, i * 1.12345, i*2.34567, i*3.4567)
             }
           }
         }
@@ -50,7 +50,7 @@ class TestRestMetricStore extends FlatSpec with Matchers {
           for (m<-List("GET","POST","DELETE","PUT")) {
             for (sc <- List(200, 404, 500)) {
               val ts = start - (i) * 60000
-              app.addDataPoint("11111-22222-33333-" + id, ep, m, sc, ts, i, i * 1.12345)
+              app.addDataPoint("11111-22222-33333-" + id, ep, m, sc, ts, i, i * 1.12345, i*2.34567, i*3.4567)
             }
           }
         }

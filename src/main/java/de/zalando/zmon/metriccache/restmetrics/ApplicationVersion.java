@@ -88,11 +88,13 @@ public class ApplicationVersion {
                     }
                 }
 
-                List<EpPoint> points = new ArrayList<>(120);
+                List<EpPoint> points = new ArrayList<>(N);
 
                 for(int i = 0 ; i<N; ++i) {
                     double rate = 0;
-                    double latency = 0;
+                    double latency99th = 0;
+                    double latencyMedian = 0;
+                    double latency75th = 0;
                     double maxLatency = 0;
                     double minLatency = Double.MAX_VALUE;
                     double maxRate = 0;
@@ -100,15 +102,19 @@ public class ApplicationVersion {
                     int n = 0;
                     boolean partial = false;
 
+                    // Looping over different application instances here
                     for (DataSeries s : series) {
                         // assume that the TS is written and thus up to date, otherwise data point is invalid
                         if(s.ts[i]>maxTs) {
                             rate += s.points[i][0];
-                            latency += s.points[i][1];
+                            latency99th += s.points[i][3];
+                            latency75th += s.points[i][2];
+                            latencyMedian += s.points[i][1];
+
                             tsMax = Math.max(tsMax, s.ts[i]);
 
-                            maxLatency = Math.max(s.points[i][1], maxLatency);
-                            minLatency = Math.min(s.points[i][1], minLatency);
+                            maxLatency = Math.max(s.points[i][3], maxLatency);
+                            minLatency = Math.min(s.points[i][3], minLatency);
                             maxRate = Math.max(s.points[i][0], maxRate);
 
                             n++;
@@ -118,7 +124,7 @@ public class ApplicationVersion {
                         }
                     }
                     if(n>0) {
-                        points.add(new EpPoint(tsMax, rate, latency / n, maxRate, maxLatency, minLatency, partial));
+                        points.add(new EpPoint(tsMax, rate, latency99th/n, latency75th/n, latencyMedian/n, maxRate, maxLatency, minLatency, partial));
                     }
                 }
 
@@ -131,8 +137,10 @@ public class ApplicationVersion {
         return result;
     }
 
+
+
     /* for now assume no concurrency issue on instance level here, as freq too low and data arrives per instance */
-    public void addDataPoint(String id, String path, String method, int status, long ts, double rate, double latency) {
+    public void addDataPoint(String id, String path, String method, int status, long ts, double rate, double latencyMedian, double latency75th, double latency99th) {
         ServiceInstance instance = null;
         for(ServiceInstance si : instances) {
             if(si.instanceId.equals(id)) {
@@ -168,6 +176,6 @@ public class ApplicationVersion {
             series = new DataSeries(status);
             ep.series.add(series);
         }
-        series.newEntry(ts, rate, latency);
+        series.newEntry(ts, rate, latencyMedian, latency75th, latency99th);
     }
 }

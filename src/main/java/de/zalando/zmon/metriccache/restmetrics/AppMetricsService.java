@@ -34,6 +34,7 @@ public class AppMetricsService {
     private HashMap<String, ApplicationVersion> appVersions = new HashMap<>();
 
     private final String localHostName;
+    private final boolean forwardData;
     private int localPartition = -1;
 
     private final static ObjectMapper mapper = new ObjectMapper();
@@ -74,7 +75,15 @@ public class AppMetricsService {
 
         executorService.scheduleWithFixedDelay(new CleanUpJob(this), 60, 60, TimeUnit.MINUTES);
 
+        if (serviceHosts.size()==1 && serviceHosts.get(0).equals("localhost")) {
+            forwardData = false;
+        }
+        else {
+            forwardData = true;
+        }
+
         LOG.info("Setting local partition to {}", localPartition);
+        LOG.info("Local host resolves to: {}", localHostName);
         LOG.info("Host names {}", serviceHosts);
     }
 
@@ -155,6 +164,8 @@ public class AppMetricsService {
                         storeMetric(applicationId, applicationVersion, entityId, path, method, status,
                                 ts,
                                 metricEntry.getValue().get("mRate").asDouble(),
+                                metricEntry.getValue().get("median").asDouble(),
+                                metricEntry.getValue().get("75th").asDouble(),
                                 metricEntry.getValue().get("99th").asDouble());
                     }
                 }
@@ -214,8 +225,15 @@ public class AppMetricsService {
                 r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".median", "median", p.getKey().toString(), p.getKey().toString().substring(0, 1));
                 for (EpPoint dp : p.getValue()) {
                     ArrayNode a = mapper.createArrayNode();
-                    a.add(dp.ts).add(dp.latency);
-                    ((ArrayNode) r.get("values")).add(a);
+                    a.add(dp.ts).add(dp.latencyMedian);
+                    ((ArrayNode)r.get("values")).add(a);
+                }
+
+                r = q.addResult(applicationId, er.path+"."+er.method+"."+p.getKey()+".75th", "75th", p.getKey().toString(), p.getKey().toString().substring(0,1));
+                for(EpPoint dp : p.getValue()) {
+                    ArrayNode a = mapper.createArrayNode();
+                    a.add(dp.ts).add(dp.latency75th);
+                    ((ArrayNode)r.get("values")).add(a);
                 }
 
                 r = q.addResult(applicationId, er.path + "." + er.method + "." + p.getKey() + ".99th", "99th", p.getKey().toString(), p.getKey().toString().substring(0, 1));
@@ -261,7 +279,7 @@ public class AppMetricsService {
         return appVersions.get(applicationId).getData(maxTs);
     }
 
-    private void storeMetric(String applicationId, String applicationVersion, String entityId, String path, String method, int status, long ts, double rate, double latency) {
+    private void storeMetric(String applicationId, String applicationVersion, String entityId, String path, String method, int status, long ts, double rate, double latencyMedian, double latency75th, double latency99th) {
         ApplicationVersion v = appVersions.get(applicationId); // no versioning for now
         if (null == v) {
             synchronized (this) {
@@ -273,6 +291,6 @@ public class AppMetricsService {
                 }
             }
         }
-        v.addDataPoint(entityId, path, method, status, ts, rate, latency);
+        v.addDataPoint(entityId, path, method, status, ts, rate, latencyMedian, latency75th, latency99th);
     }
 }

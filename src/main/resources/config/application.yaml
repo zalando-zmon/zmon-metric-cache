@@ -1,2 +1,13 @@
 server:
   port: 8086
+
+endpoints:
+  enabled: false
+  health:
+    enabled: true
+    sensitive: true
+  metrics:
+    enabled: true
+
+metriccache:
+  rest_metric_hosts: ["localhost"]

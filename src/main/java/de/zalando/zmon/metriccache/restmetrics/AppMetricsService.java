@@ -113,26 +113,6 @@ public class AppMetricsService {
         }
     }
 
-    public void receiveData(Map<Integer, List<CheckData>> data) {
-        // store local data
-        if (data.containsKey(localPartition)) {
-            storeData(data.get(localPartition));
-        }
-
-        Async async = Async.newInstance().use(asyncExecutorPool);
-        for (int i = 0; i < serviceHosts.size(); ++i) {
-            if (localPartition == i) continue;
-            if (!data.containsKey(i) || data.get(i).size() <= 0) continue;
-
-            try {
-                Request r = Request.Post("http://" + serviceHosts.get(i) + ":" + serverPort + "/api/v1/rest-api-metrics/").bodyString(mapper.writeValueAsString(data.get(i)), ContentType.APPLICATION_JSON);
-                async.execute(r);
-            } catch (IOException ex) {
-                LOG.error("Failed to serialize check data", ex);
-            }
-        }
-    }
-
     public void pushMetric(String applicationId, String applicationVersion, String entityId, long ts, JsonNode checkResult) {
         Iterator<Map.Entry<String, JsonNode>> endpoints = ((ObjectNode) checkResult).fields();
         while (endpoints.hasNext()) {

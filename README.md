@@ -5,6 +5,5 @@ Cache for actuator metric data to power the ZMON Frontend's cloud/app view with 
 
 ```bash
 ./mvnw clean install
-scm-source -f target/scm-source.json
 docker build -t zmon-metric-cache .
 ```

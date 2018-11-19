@@ -39,23 +39,35 @@ public class Application {
 
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    @Autowired
-    MetricCacheConfig config;
+    private final MetricCacheConfig config;
 
-    @Autowired
-    ObjectMapper mapper;
+    private final ObjectMapper mapper;
 
-    @Autowired
-    ApplicationMetricsWriter metricsWriter;
+    private final ApplicationMetricsWriter metricsWriter;
 
-    @Autowired
-    AppMetricsService applicationRestMetrics;
+    private final AppMetricsService applicationRestMetrics;
+
+    private final Executor executor;
 
     private static ObjectMapper valueMapper;
     static {
         valueMapper = new ObjectMapper();
         valueMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         valueMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+    }
+
+
+    @Autowired
+    public Application(MetricCacheConfig config,
+                       ObjectMapper mapper,
+                       ApplicationMetricsWriter metricsWriter,
+                       AppMetricsService applicationRestMetrics,
+                       Executor executor) {
+        this.config = config;
+        this.mapper = mapper;
+        this.metricsWriter = metricsWriter;
+        this.applicationRestMetrics = applicationRestMetrics;
+        this.executor = executor;
     }
 
 
@@ -110,7 +122,6 @@ public class Application {
             // TODO: we would not need to redirect if the host list is empty or contains only one item (ourself)
             LOG.info("Redirecting KairosDB metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
-            Executor executor = Executor.newInstance();
             URIBuilder builder = new URIBuilder();
             URI uri = builder.setScheme("http").setHost(targetHost).setPort(Integer.parseInt(config.getServer_port())).setPath("/api/v1/rest-api-metrics/kairosdb-format").setParameter("redirect", "false")
                     .setParameter("application_id", applicationId)
@@ -142,7 +153,6 @@ public class Application {
             String targetHost = config.getRest_metric_hosts().get(hostId);
             LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
-            Executor executor = Executor.newInstance();
             URIBuilder builder = new URIBuilder();
             URI uri = builder.setScheme("http").setHost(targetHost).setPort(Integer.parseInt(config.getServer_port())).setPath("/api/v1/rest-api-metrics/").setParameter("redirect", "false")
                                                                                       .setParameter("application_id", applicationId)

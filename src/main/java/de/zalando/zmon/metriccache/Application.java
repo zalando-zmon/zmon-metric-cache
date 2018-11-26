@@ -217,7 +217,11 @@ public class Application {
         return spanBuild.startActive();
     }
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+    public static void main(String[] args) throws Exception {
+        try {
+            SpringApplication.run(Application.class, args);
+        } catch (Exception e) {
+            LOG.error("Error occurred on startup", e);
+        }
     }
 }

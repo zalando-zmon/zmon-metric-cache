@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.zalando.zmon.metriccache.restmetrics.AppMetricsService;
 import de.zalando.zmon.metriccache.restmetrics.VersionResult;
-import io.opentracing.ActiveSpan;
+import io.opentracing.Scope;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.spring.web.client.HttpHeadersCarrier;
@@ -76,7 +76,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.POST)
     public void putRestAPIMetrics(@RequestHeader HttpHeaders headers,
                                   @RequestBody String data) throws IOException {
-        try (ActiveSpan ignored = createSpan("add_metrics", headers)) {
+        try (Scope ignored = createSpan("add_metrics", headers)) {
             // assume for now, that we only receive the right application data
             List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
             });
@@ -88,7 +88,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/unpartitioned", method = RequestMethod.POST)
     public void putRestAPIMetricsUnpartitioned(@RequestHeader HttpHeaders headers,
                                                @RequestBody String data) throws IOException {
-        try (ActiveSpan ignored = createSpan("add_metrics_unpartitioned", headers)) {
+        try (Scope ignored = createSpan("add_metrics_unpartitioned", headers)) {
             // Post data but repartition accross set of hosts (this is already done in data service)
             List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
             });
@@ -100,7 +100,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/applications", method = RequestMethod.GET)
     public Collection<String> getRegisteredApplications(@RequestHeader HttpHeaders headers,
                                                         @RequestParam(value = "global", defaultValue = "false") boolean global) {
-        try (ActiveSpan ignored = createSpan("get_registered_applications", headers)) {
+        try (Scope ignored = createSpan("get_registered_applications", headers)) {
             // assume for now, that we only receive the right application data
             return applicationRestMetrics.getRegisteredAppVersions();
         }
@@ -111,7 +111,7 @@ public class Application {
     public Collection<String> getTrackedEndpoints(@RequestHeader HttpHeaders headers,
                                                   @RequestParam(value = "application_id") String applicationId,
                                                   @RequestParam(value = "global", defaultValue = "false") boolean global) {
-        try (ActiveSpan ignored = createSpan("get_tracked_endpoints", headers)) {
+        try (Scope ignored = createSpan("get_tracked_endpoints", headers)) {
             // assume for now, that we only receive the right application data
             return applicationRestMetrics.getRegisteredEndpoints(applicationId);
         }
@@ -132,7 +132,7 @@ public class Application {
         }
 
         if (!redirect) {
-            try (ActiveSpan ignored = createSpan("get_metrics_kairosdb_format", headers)) {
+            try (Scope ignored = createSpan("get_metrics_kairosdb_format", headers)) {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 AppMetricsService.KairosDBResultWrapper kairosResult =
                         applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis());
@@ -141,7 +141,7 @@ public class Application {
                 LOG.error("Failed to write metric result to output stream", ex);
             }
         } else {
-            try (ActiveSpan ignored = createSpan("get_metrics_kairosdb_format_redirect", headers)) {
+            try (Scope ignored = createSpan("get_metrics_kairosdb_format_redirect", headers)) {
                 int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
                 String targetHost = config.getRest_metric_hosts().get(hostId);
                 LOG.info("Redirecting KairosDB metrics request to {} = {}/{}", applicationId, hostId, targetHost);
@@ -167,7 +167,7 @@ public class Application {
         }
 
         if (!redirect) {
-            try (ActiveSpan ignored = createSpan("get_metrics", headers)) {
+            try (Scope ignored = createSpan("get_metrics", headers)) {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 VersionResult metrics =
                         applicationRestMetrics.getAggrMetrics(applicationId, applicationVersion, System.currentTimeMillis());
@@ -176,7 +176,7 @@ public class Application {
                 LOG.error("Failed to write metric result to output stream", ex);
             }
         } else {
-            try (ActiveSpan ignored = createSpan("get_metrics_redirect", headers)) {
+            try (Scope ignored = createSpan("get_metrics_redirect", headers)) {
                 int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
                 String targetHost = config.getRest_metric_hosts().get(hostId);
                 LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
@@ -205,7 +205,7 @@ public class Application {
     }
 
 
-    private ActiveSpan createSpan(String spanName, HttpHeaders httpHeaders) {
+    private Scope createSpan(String spanName, HttpHeaders httpHeaders) {
         final HttpHeadersCarrier carrier = new HttpHeadersCarrier(httpHeaders);
         final Tracer.SpanBuilder spanBuild = tracer.buildSpan(spanName).withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
 
@@ -214,10 +214,10 @@ public class Application {
             spanBuild.asChildOf(spanContext);
         }
 
-        return spanBuild.startActive();
+        return spanBuild.startActive(false);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         try {
             SpringApplication.run(Application.class, args);
         } catch (Exception e) {

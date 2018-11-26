@@ -216,7 +216,7 @@ public class Application {
             spanBuild.asChildOf(spanContext);
         }
 
-        return spanBuild.startActive(false);
+        return spanBuild.startActive(true);
     }
 
     public static void main(String[] args) {

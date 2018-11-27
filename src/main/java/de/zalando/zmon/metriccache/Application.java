@@ -125,29 +125,28 @@ public class Application {
                                            @RequestParam(value = "application_version", defaultValue = "1") String applicationVersion,
                                            @RequestParam(value = "redirect", defaultValue = "true") boolean redirect)
             throws URISyntaxException, IOException {
-        if (config.getRest_metric_hosts().isEmpty() ||
-                (config.getRest_metric_hosts().size() == 1 && config.getRest_metric_hosts().get(0).equals("localhost"))) {
-            redirect = false;
-        }
+        redirect = isRedirect(redirect);
 
         try (Scope scope = createSpan("get_metrics_kairosdb_format")) {
             scope.span().setTag("application_id", applicationId);
 
-            if (!redirect) {
-                response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
-                AppMetricsService.KairosDBResultWrapper kairosResult =
-                        applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis());
-                writer.write(mapper.writeValueAsString(kairosResult));
-            } else {
+            if (redirect) {
                 scope.span().setTag("redirect", true);
                 makeRedirect(writer, response, applicationId, applicationVersion,
                         "/api/v1/rest-api-metrics/kairosdb-format");
+            } else {
+                response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
+                AppMetricsService.KairosDBResultWrapper kairosResult = applicationRestMetrics.getKairosResult(
+                        applicationId, applicationVersion, System.currentTimeMillis()
+                );
+                writer.write(mapper.writeValueAsString(kairosResult));
             }
         } catch (IOException ex) {
             LOG.error("Failed to write metric result to output stream", ex);
             throw ex;
         }
     }
+
 
     @ResponseBody
     @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.GET)
@@ -158,29 +157,32 @@ public class Application {
                                   @RequestParam(value = "application_version") String applicationVersion,
                                   @RequestParam(value = "redirect", defaultValue = "true") boolean redirect)
             throws URISyntaxException, IOException {
-        if (config.getRest_metric_hosts().isEmpty() ||
-                (config.getRest_metric_hosts().size() == 1 && config.getRest_metric_hosts().get(0).equals("localhost"))) {
-            redirect = false;
-        }
+        redirect = isRedirect(redirect);
 
         try (Scope scope = createSpan("get_metrics")) {
             scope.span().setTag("application_id", applicationId);
 
-            if (!redirect) {
+            if (redirect) {
+                scope.span().setTag("redirect", true);
+                makeRedirect(writer, response, applicationId, applicationVersion,
+                        "/api/v1/rest-api-metrics/");
+            } else {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 VersionResult metrics = applicationRestMetrics.getAggrMetrics(
                         applicationId, applicationVersion, System.currentTimeMillis()
                 );
                 writer.write(mapper.writeValueAsString(metrics));
-            } else {
-                scope.span().setTag("redirect", true);
-                makeRedirect(writer, response, applicationId, applicationVersion, "/api/v1/rest-api-metrics/");
             }
-
         } catch (IOException ex) {
             LOG.error("Failed to write metric result to output stream", ex);
             throw ex;
         }
+    }
+
+    private boolean isRedirect(boolean redirectRequested) {
+        final boolean noHostsToRedirect = config.getRest_metric_hosts().isEmpty();
+        final boolean onlyLocalhostToRedirect = config.getRest_metric_hosts().size() == 1 && config.getRest_metric_hosts().get(0).equals("localhost");
+        return !noHostsToRedirect && !onlyLocalhostToRedirect && redirectRequested;
     }
 
     private void makeRedirect(Writer writer, HttpServletResponse response,

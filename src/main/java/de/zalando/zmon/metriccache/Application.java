@@ -130,20 +130,18 @@ public class Application {
             redirect = false;
         }
 
-        if (!redirect) {
-            try (Scope ignored = createSpan("get_metrics_kairosdb_format")) {
+        try (Scope ignored = createSpan("get_metrics_kairosdb_format")) {
+            if (!redirect) {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 AppMetricsService.KairosDBResultWrapper kairosResult =
                         applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis());
                 writer.write(mapper.writeValueAsString(kairosResult));
-            } catch (IOException ex) {
-                LOG.error("Failed to write metric result to output stream", ex);
-            }
-        } else {
-            try (Scope ignored = createSpan("get_metrics_kairosdb_format_redirect")) {
+            } else {
                 makeRedirect(writer, response, applicationId, applicationVersion,
                         "/api/v1/rest-api-metrics/kairosdb-format");
             }
+        } catch (IOException ex) {
+            LOG.error("Failed to write metric result to output stream", ex);
         }
 
     }

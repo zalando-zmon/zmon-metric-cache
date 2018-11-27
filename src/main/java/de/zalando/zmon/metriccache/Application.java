@@ -6,12 +6,7 @@ import de.zalando.zmon.metriccache.restmetrics.AppMetricsService;
 import de.zalando.zmon.metriccache.restmetrics.VersionResult;
 import io.opentracing.Scope;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.contrib.spring.web.client.HttpHeadersCarrier;
-import io.opentracing.contrib.web.servlet.filter.HttpServletRequestExtractAdapter;
-import io.opentracing.propagation.Format;
-import io.opentracing.propagation.TextMap;
 import io.opentracing.tag.Tags;
 import org.apache.http.client.fluent.Executor;
 import org.apache.http.client.fluent.Request;
@@ -79,7 +74,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.POST)
     public void putRestAPIMetrics(HttpServletRequest request,
                                   @RequestBody String data) throws IOException {
-        try (Scope ignored = createSpan("add_metrics", request)) {
+        try (Scope ignored = createSpan("add_metrics")) {
             // assume for now, that we only receive the right application data
             List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
             });
@@ -91,7 +86,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/unpartitioned", method = RequestMethod.POST)
     public void putRestAPIMetricsUnpartitioned(HttpServletRequest request,
                                                @RequestBody String data) throws IOException {
-        try (Scope ignored = createSpan("add_metrics_unpartitioned", request)) {
+        try (Scope ignored = createSpan("add_metrics_unpartitioned")) {
             // Post data but repartition accross set of hosts (this is already done in data service)
             List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
             });
@@ -103,7 +98,7 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/applications", method = RequestMethod.GET)
     public Collection<String> getRegisteredApplications(HttpServletRequest request,
                                                         @RequestParam(value = "global", defaultValue = "false") boolean global) {
-        try (Scope ignored = createSpan("get_registered_applications", request)) {
+        try (Scope ignored = createSpan("get_registered_applications")) {
             // assume for now, that we only receive the right application data
             return applicationRestMetrics.getRegisteredAppVersions();
         }
@@ -114,7 +109,8 @@ public class Application {
     public Collection<String> getTrackedEndpoints(HttpServletRequest request,
                                                   @RequestParam(value = "application_id") String applicationId,
                                                   @RequestParam(value = "global", defaultValue = "false") boolean global) {
-        try (Scope ignored = createSpan("get_tracked_endpoints", request)) {
+        try (Scope scope = createSpan("get_tracked_endpoints")) {
+            scope.span().setTag("application_id", applicationId);
             // assume for now, that we only receive the right application data
             return applicationRestMetrics.getRegisteredEndpoints(applicationId);
         }
@@ -134,24 +130,22 @@ public class Application {
             redirect = false;
         }
 
-        if (!redirect) {
-            try (Scope ignored = createSpan("get_metrics_kairosdb_format", request)) {
+        try (Scope scope = createSpan("get_metrics_kairosdb_format")) {
+            scope.span().setTag("application_id", applicationId);
+
+            if (!redirect) {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
                 AppMetricsService.KairosDBResultWrapper kairosResult =
                         applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis());
                 writer.write(mapper.writeValueAsString(kairosResult));
-            } catch (IOException ex) {
-                LOG.error("Failed to write metric result to output stream", ex);
-            }
-        } else {
-            try (Scope ignored = createSpan("get_metrics_kairosdb_format_redirect", request)) {
-                int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
-                String targetHost = config.getRest_metric_hosts().get(hostId);
-                LOG.info("Redirecting KairosDB metrics request to {} = {}/{}", applicationId, hostId, targetHost);
-
-                makeRedirect(writer, response, applicationId, applicationVersion, targetHost,
+            } else {
+                scope.span().setTag("redirect", true);
+                makeRedirect(writer, response, applicationId, applicationVersion,
                         "/api/v1/rest-api-metrics/kairosdb-format");
             }
+        } catch (IOException ex) {
+            LOG.error("Failed to write metric result to output stream", ex);
+            throw ex;
         }
     }
 
@@ -169,30 +163,33 @@ public class Application {
             redirect = false;
         }
 
-        if (!redirect) {
-            try (Scope ignored = createSpan("get_metrics", request)) {
-                response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
-                VersionResult metrics =
-                        applicationRestMetrics.getAggrMetrics(applicationId, applicationVersion, System.currentTimeMillis());
-                writer.write(mapper.writeValueAsString(metrics));
-            } catch (IOException ex) {
-                LOG.error("Failed to write metric result to output stream", ex);
-            }
-        } else {
-            try (Scope ignored = createSpan("get_metrics_redirect", request)) {
-                int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
-                String targetHost = config.getRest_metric_hosts().get(hostId);
-                LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
+        try (Scope scope = createSpan("get_metrics")) {
+            scope.span().setTag("application_id", applicationId);
 
-                makeRedirect(writer, response, applicationId, applicationVersion, targetHost,
-                        "/api/v1/rest-api-metrics/");
+            if (!redirect) {
+                response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
+                VersionResult metrics = applicationRestMetrics.getAggrMetrics(
+                        applicationId, applicationVersion, System.currentTimeMillis()
+                );
+                writer.write(mapper.writeValueAsString(metrics));
+            } else {
+                scope.span().setTag("redirect", true);
+                makeRedirect(writer, response, applicationId, applicationVersion, "/api/v1/rest-api-metrics/");
             }
+
+        } catch (IOException ex) {
+            LOG.error("Failed to write metric result to output stream", ex);
+            throw ex;
         }
     }
 
     private void makeRedirect(Writer writer, HttpServletResponse response,
-                              String applicationId, String applicationVersion, String targetHost, String path)
+                              String applicationId, String applicationVersion, String path)
             throws URISyntaxException, IOException {
+        int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
+        String targetHost = config.getRest_metric_hosts().get(hostId);
+        LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
+
         URIBuilder builder = new URIBuilder();
         URI uri = builder.setScheme("http")
                 .setHost(targetHost)
@@ -208,15 +205,10 @@ public class Application {
     }
 
 
-    private Scope createSpan(String spanName, HttpServletRequest request) {
+    private Scope createSpan(final String operationName) {
         final Span span = tracer.activeSpan();
-        span.setOperationName(spanName);
+        span.setOperationName(operationName);
         span.setTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
-
-//        final TextMap carrier = new HttpServletRequestExtractAdapter(request);
-//        final SpanContext spanContext = tracer.extract(Format.Builtin.HTTP_HEADERS, carrier);
-//        spanContext
-
         return tracer.scopeManager().activate(span, true);
     }
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.zalando.zmon.metriccache.restmetrics.AppMetricsService;
 import de.zalando.zmon.metriccache.restmetrics.VersionResult;
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.spring.web.client.HttpHeadersCarrier;
@@ -208,15 +209,15 @@ public class Application {
 
 
     private Scope createSpan(String spanName, HttpServletRequest request) {
-        final TextMap carrier = new HttpServletRequestExtractAdapter(request);
-        final Tracer.SpanBuilder spanBuild = tracer.buildSpan(spanName).withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
+        final Span span = tracer.activeSpan();
+        span.setOperationName(spanName);
+        span.setTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
 
-        final SpanContext spanContext = tracer.extract(Format.Builtin.HTTP_HEADERS, carrier);
-        if (spanContext != null) {
-            spanBuild.asChildOf(spanContext);
-        }
+//        final TextMap carrier = new HttpServletRequestExtractAdapter(request);
+//        final SpanContext spanContext = tracer.extract(Format.Builtin.HTTP_HEADERS, carrier);
+//        spanContext
 
-        return spanBuild.startActive(true);
+        return tracer.scopeManager().activate(span, true);
     }
 
     public static void main(String[] args) {

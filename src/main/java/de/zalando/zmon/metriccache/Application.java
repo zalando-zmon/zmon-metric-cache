@@ -72,8 +72,7 @@ public class Application {
 
     @ResponseBody
     @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.POST)
-    public void putRestAPIMetrics(HttpServletRequest request,
-                                  @RequestBody String data) throws IOException {
+    public void putRestAPIMetrics(@RequestBody String data) throws IOException {
         try (Scope ignored = createSpan("add_metrics")) {
             // assume for now, that we only receive the right application data
             List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
@@ -84,8 +83,7 @@ public class Application {
 
     @ResponseBody
     @RequestMapping(value = "/api/v1/rest-api-metrics/unpartitioned", method = RequestMethod.POST)
-    public void putRestAPIMetricsUnpartitioned(HttpServletRequest request,
-                                               @RequestBody String data) throws IOException {
+    public void putRestAPIMetricsUnpartitioned(@RequestBody String data) throws IOException {
         try (Scope ignored = createSpan("add_metrics_unpartitioned")) {
             // Post data but repartition accross set of hosts (this is already done in data service)
             List<CheckData> results = mapper.readValue(data, new TypeReference<List<CheckData>>() {
@@ -96,8 +94,7 @@ public class Application {
 
     @ResponseBody
     @RequestMapping(value = "/api/v1/rest-api-metrics/applications", method = RequestMethod.GET)
-    public Collection<String> getRegisteredApplications(HttpServletRequest request,
-                                                        @RequestParam(value = "global", defaultValue = "false") boolean global) {
+    public Collection<String> getRegisteredApplications(@RequestParam(value = "global", defaultValue = "false") boolean global) {
         try (Scope ignored = createSpan("get_registered_applications")) {
             // assume for now, that we only receive the right application data
             return applicationRestMetrics.getRegisteredAppVersions();
@@ -120,7 +117,6 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/kairosdb-format", method = RequestMethod.GET)
     public void getMetricsInKairosDBFormat(Writer writer,
                                            HttpServletResponse response,
-                                           HttpServletRequest request,
                                            @RequestParam(value = "application_id") String applicationId,
                                            @RequestParam(value = "application_version", defaultValue = "1") String applicationVersion,
                                            @RequestParam(value = "redirect", defaultValue = "true") boolean redirect)
@@ -129,15 +125,15 @@ public class Application {
 
         try (Scope scope = createSpan("get_metrics_kairosdb_format")) {
             scope.span().setTag("application_id", applicationId);
-
             if (redirect) {
                 scope.span().setTag("redirect", true);
                 makeRedirect(writer, response, applicationId, applicationVersion,
                         "/api/v1/rest-api-metrics/kairosdb-format");
             } else {
                 response.setContentType(ContentType.APPLICATION_JSON.getMimeType());
-                AppMetricsService.KairosDBResultWrapper kairosResult =
-                        applicationRestMetrics.getKairosResult(applicationId, applicationVersion, System.currentTimeMillis());
+                AppMetricsService.KairosDBResultWrapper kairosResult = applicationRestMetrics.getKairosResult(
+                        applicationId, applicationVersion, System.currentTimeMillis()
+                );
                 writer.write(mapper.writeValueAsString(kairosResult));
             }
         } catch (IOException ex) {
@@ -151,7 +147,6 @@ public class Application {
     @RequestMapping(value = "/api/v1/rest-api-metrics/", method = RequestMethod.GET)
     public void getRestApiMetrics(Writer writer,
                                   HttpServletResponse response,
-                                  HttpServletRequest request,
                                   @RequestParam(value = "application_id") String applicationId,
                                   @RequestParam(value = "application_version") String applicationVersion,
                                   @RequestParam(value = "redirect", defaultValue = "true") boolean redirect)
@@ -160,7 +155,6 @@ public class Application {
 
         try (Scope scope = createSpan("get_metrics")) {
             scope.span().setTag("application_id", applicationId);
-
             if (redirect) {
                 scope.span().setTag("redirect", true);
                 makeRedirect(writer, response, applicationId, applicationVersion,

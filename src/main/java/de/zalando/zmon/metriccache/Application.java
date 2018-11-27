@@ -128,10 +128,10 @@ public class Application {
         redirect = isRedirect(redirect);
 
         try (Scope scope = createSpan("get_metrics_kairosdb_format")) {
-            scope.span().setTag("application_id", applicationId);
+//            scope.span().setTag("application_id", applicationId);
 
             if (redirect) {
-                scope.span().setTag("redirect", true);
+//                scope.span().setTag("redirect", true);
                 makeRedirect(writer, response, applicationId, applicationVersion,
                         "/api/v1/rest-api-metrics/kairosdb-format");
             } else {

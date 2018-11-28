@@ -1,12 +1,13 @@
 package de.zalando.zmon.metriccache
 
 import java.util
+import java.util.Collections
 
+import io.opentracing.contrib.spring.web.interceptor.HandlerInterceptorSpanDecorator
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.{Bean, Configuration}
 import org.springframework.stereotype.Component
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 import scala.beans.BeanProperty
 
@@ -20,5 +21,5 @@ class MetricCacheConfig {
   @Value("${server.port}")
   @BeanProperty var server_port: String = _
 
-  @Bean def tracingHandlerInterceptor(): WebMvcConfigurerAdapter = new WebMvcConfigurerAdapter() {}
+  @Bean def interceptorSpanDecorator(): util.List[HandlerInterceptorSpanDecorator] = Collections.emptyList()
 }

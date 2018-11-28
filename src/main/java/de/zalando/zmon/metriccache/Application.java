@@ -180,22 +180,22 @@ public class Application {
     }
 
     private boolean isRedirect(boolean redirectRequested) {
-        final boolean noHostsToRedirect = config.getRest_metric_hosts().isEmpty();
-        final boolean onlyLocalhostToRedirect = config.getRest_metric_hosts().size() == 1 && config.getRest_metric_hosts().get(0).equals("localhost");
+        final boolean noHostsToRedirect = config.getRestMetricHosts().isEmpty();
+        final boolean onlyLocalhostToRedirect = config.getRestMetricHosts().size() == 1 && config.getRestMetricHosts().get(0).equals("localhost");
         return !noHostsToRedirect && !onlyLocalhostToRedirect && redirectRequested;
     }
 
     private void makeRedirect(Writer writer, HttpServletResponse response,
                               String applicationId, String applicationVersion, String path)
             throws URISyntaxException, IOException {
-        int hostId = Math.abs(applicationId.hashCode() % config.getRest_metric_hosts().size());
-        String targetHost = config.getRest_metric_hosts().get(hostId);
+        int hostId = Math.abs(applicationId.hashCode() % config.getRestMetricHosts().size());
+        String targetHost = config.getRestMetricHosts().get(hostId);
         LOG.info("Redirecting metrics request to {} = {}/{}", applicationId, hostId, targetHost);
 
         URIBuilder builder = new URIBuilder();
         URI uri = builder.setScheme("http")
                 .setHost(targetHost)
-                .setPort(Integer.parseInt(config.getServer_port()))
+                .setPort(Integer.parseInt(config.getServerPort()))
                 .setPath(path)
                 .setParameter("redirect", "false")
                 .setParameter("application_id", applicationId)

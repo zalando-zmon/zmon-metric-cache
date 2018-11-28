@@ -6,9 +6,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.zalando.zmon.metriccache.CheckData;
 import de.zalando.zmon.metriccache.MetricCacheConfig;
-import org.apache.http.client.fluent.Async;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,9 +60,9 @@ public class AppMetricsService {
 
     @Autowired
     public AppMetricsService(MetricCacheConfig config) throws IOException {
-        serviceHosts = config.getRest_metric_hosts();
+        serviceHosts = config.getRestMetricHosts();
         localHostName = InetAddress.getLocalHost().getHostName();
-        serverPort = Integer.parseInt(config.server_port());
+        serverPort = Integer.parseInt(config.getServerPort());
 
         for(int i = 0; i < serviceHosts.size(); ++i) {
             if(serviceHosts.get(i).equals(localHostName)) {

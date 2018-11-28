@@ -33,7 +33,7 @@ class ApplicationMetricsWriter {
                 Map<Integer, List<CheckData>> partitions =data.stream()
                         .filter(x -> !x.exception)
                         .collect(Collectors.groupingBy(x -> Math
-                                .abs(x.entity.get("application_id").hashCode() % config.getRest_metric_hosts().size())));
+                                .abs(x.entity.get("application_id").hashCode() % config.getRestMetricHosts().size())));
 
                 applicationMetricsClient.receiveData(partitions);
                 log.debug("application-metrics written");

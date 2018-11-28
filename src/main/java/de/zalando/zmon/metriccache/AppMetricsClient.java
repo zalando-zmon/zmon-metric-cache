@@ -33,8 +33,8 @@ public class AppMetricsClient {
 
     @Autowired
     public AppMetricsClient(MetricCacheConfig config) {
-        serviceHosts = config.getRest_metric_hosts();
-        serverPort = Integer.parseInt(config.getServer_port());
+        serviceHosts = config.getRestMetricHosts();
+        serverPort = Integer.parseInt(config.getServerPort());
         this.mapper = new ObjectMapper();
 
         LOG.info("App metric cache config: hosts {} port {}", serviceHosts, serverPort);

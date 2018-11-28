@@ -30,6 +30,11 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>2.7.3</version>
@@ -49,7 +54,7 @@
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.11.6</version>
+            <version>2.11.12</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
@@ -59,18 +64,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-scala_2.11</artifactId>
-            <version>2.4.5</version>
+            <version>2.9.7</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>2.4.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_2.11</artifactId>
-            <version>2.2.1</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -88,10 +87,15 @@
             <artifactId>opentracing-spring-cloud-starter</artifactId>
             <version>0.2.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_2.11</artifactId>
+            <version>2.2.6</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
-
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -103,7 +107,6 @@
         </pluginManagement>
         <!-- To use the plugin goals in your POM or parent POM -->
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -154,7 +157,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <scalaVersion>2.11.6</scalaVersion>
+                    <scalaVersion>2.11.12</scalaVersion>
                     <args>
                         <arg>-target:jvm-1.8</arg>
                     </args>
@@ -195,7 +198,6 @@
                     <mainClass>de.zalando.zmon.metriccache.Application</mainClass>
                 </configuration>
             </plugin>
-
         </plugins>
     </build>
 
